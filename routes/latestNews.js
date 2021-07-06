@@ -1,6 +1,8 @@
 const router = require("express").Router();
 const LatestNews = require("../models/latestNews");
 const multer = require("multer");
+const auth = require("../middlewares/auth");
+const admin = require("../middlewares/admin");
 const upload = multer();
 
 router.get("/", async (req, res) => {
@@ -23,7 +25,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/", upload.single("img"), async (req, res) => {
+router.post("/", [auth, admin, upload.single("img")], async (req, res) => {
   try {
     await LatestNews.deleteMany();
 

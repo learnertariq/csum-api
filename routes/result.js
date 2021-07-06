@@ -1,15 +1,37 @@
 const router = require("express").Router();
-const Result = require("../models/result");
 const multer = require("multer");
 const upload = multer();
 
-router.get("/", (req, res) => {
-  res.send("result working");
+const Result = require("../models/result");
+const auth = require("../middlewares/auth");
+const admin = require("../middlewares/admin");
+
+router.get("/", async (req, res) => {
+  try {
+    const results = await Result.find({}).select("className year");
+
+    const classNames = [];
+    const years = [];
+    results.forEach((item) => {
+      if (!classNames.includes(item.className)) classNames.push(item.className);
+      if (!years.includes(item.year)) years.push(item.year);
+    });
+
+    res.json({ success: true, data: { classNames, years } });
+  } catch (ex) {
+    res.status(500).json({ success: false, msg: ex.message });
+  }
 });
 
-router.post("/", upload.single("pdf"), async (req, res) => {
+router.post("/", [auth, admin, upload.single("pdf")], async (req, res) => {
   try {
-    const result = new Result({
+    let result = await Result.findOne({
+      className: req.body.className,
+      year: req.body.year,
+    });
+    if (result) await result.remove();
+
+    result = new Result({
       className: req.body.className,
       year: req.body.year,
       pdf: req.file.buffer,
@@ -35,6 +57,7 @@ router.post("/", upload.single("pdf"), async (req, res) => {
 });
 
 router.post("/download", async (req, res) => {
+  console.log(req.body);
   try {
     const result = await Result.findOne({
       className: req.body.className,
